@@ -4,6 +4,13 @@
 """The setup script."""
 
 from setuptools import setup, find_packages
+from os.path import abspath, join as joinpath
+
+# Write the name of the local source directory in the package subfolder
+cwd = abspath('.')
+with open(joinpath('pysurf', 'source_path.txt'), 'w') as fh:
+    fh.write(cwd)
+#
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
@@ -39,6 +46,7 @@ setup(
     include_package_data=True,
     keywords='pysurf',
     name='pysurf',
+    #packages=find_packages(include=['pysurf', 'pysurf.*'] + ['plugins']),
     packages=find_packages(include=['pysurf', 'pysurf.*']),
     setup_requires=setup_requirements,
     test_suite='tests',
