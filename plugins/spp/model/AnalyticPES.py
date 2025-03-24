@@ -15,7 +15,7 @@ class SumOfProductsPES(Model):
     parameter_file =  :: str
     """
     
-    implemented = ['energy', 'gradient', 'nacs', 'time']  
+    implemented = ['energy', 'gradient', 'nacs', 'Hel', 'Hel_gradient', 'time']    
     
     au2fs = 0.02418884
     
@@ -30,13 +30,14 @@ class SumOfProductsPES(Model):
             pes_data = pes_file.readlines()
         
         # Read the potential terms
+        mass = []
         freq = []
         freq_ij = []  # accounts for kinematic couplings
         pes  = []
         func_def = []
         nstates = get_nstates(pes_data)  # get the number of electronic states
         for line in pes_data:
-            add_potential_term(line, pes, func_def, nstates, freq, freq_ij)
+            add_potential_term(line, pes, func_def, nstates, mass, freq, freq_ij)
             
         # Diagonalize the metric matrix and get the transformation matrix
         nModes = len(freq)
@@ -65,9 +66,9 @@ class SumOfProductsPES(Model):
         func, d_func = generate_functions(func_def, path)
             
         #
-        return cls(pes, nstates, freq, trafo, C_trafo, func, d_func)
+        return cls(pes, nstates, mass, freq, trafo, C_trafo, func, d_func)
     
-    def __init__(self, pes, nstates, freq, trafo, C_trafo, func, d_func):
+    def __init__(self, pes, nstates, mass, freq, trafo, C_trafo, func, d_func):
         self.pes = pes
         self.func = func
         self.d_func = d_func
@@ -77,14 +78,17 @@ class SumOfProductsPES(Model):
         for iM, w in freq:
             self.freq[iM] = w
         #
-        self.trafo = trafo      # Should the input coordinates be transformed before evaluating the PES?
+        self.trafo = trafo      # If true, the input coordinates are transformed before evaluating the PES
         self.C_trafo = C_trafo  # Transformation matrix
             
         # Attributes needed for sampling
         self.crd    = np.zeros(self.nmodes)
         disp  = np.eye(self.nmodes)
         self.modes  = [Mode(w, disp[i]) for i, w in enumerate(self.freq)]
-        self.masses = 1.0 / self.freq.copy()
+        
+        self.masses = 1.0 / self.freq   # this default corresponds to the use of dimensionless normal modes
+        for iM, m in mass:
+            self.masses[iM] = m        
         
         # Time (needed for time-dependent potentials)
         self.time = 0.0
@@ -305,7 +309,7 @@ def get_nstates(pes_data):
     return nstates
 
 
-def add_potential_term(line, pes, func_def, nstates, freq, freq_ij):
+def add_potential_term(line, pes, func_def, nstates, mass, freq, freq_ij):
     """    
     Parameters
     ----------
@@ -336,7 +340,8 @@ def add_potential_term(line, pes, func_def, nstates, freq, freq_ij):
     # FIRST CASE: The line contains info about masses/frequencies
     #     
     
-    if ls[0].strip() in ('freq', 'mass'):
+    quantity = ls[0].strip().lower()
+    if quantity in ('freq', 'mass'):
         for term in ls[1:]:
             ts = term.split()
             # check that the format is right
@@ -350,11 +355,20 @@ def add_potential_term(line, pes, func_def, nstates, freq, freq_ij):
             # Read the modes and the associated mass/frequency
             
             if len(ts) == 2:
-                dummy = float(ts[1]) if ls[0].strip() == 'freq' else 1.0 / float(ts[1])
-                freq.append( (int(ts[0]) - 1, dummy) )
+                dummy = float(ts[1])
+                if quantity == 'freq':
+                    freq.append((int(ts[0]) - 1, dummy))
+                if quantity == 'mass':
+                    mass.append((int(ts[0]) - 1, dummy))
+                
+                #dummy = float(ts[1]) if ls[0].strip() == 'freq' else 1.0 / float(ts[1])
+                #freq.append( (int(ts[0]) - 1, dummy) )
                 
             if len(ts) == 3:   # kinematic couplings
-                dummy = float(ts[2]) if ls[0].strip() == 'freq' else 1.0 / float(ts[2])
+                if quantity == 'mass':
+                    print('ERROR: the kinematic coupling need to be given in a frequency format')
+                    exit()
+                dummy = float(ts[2])
                 i1 = int(ts[0]) - 1
                 i2 = int(ts[1]) - 1
                 freq_ij.append( (i1,i2,dummy) )
