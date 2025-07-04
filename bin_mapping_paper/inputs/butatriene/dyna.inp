@@ -1,0 +1,22 @@
+n_traj = 1000
+time_final = 200
+time_step = 0.1
+time_output = 1.0
+sampler = Wigner
+spp_data = spp.inp
+n_states = 2
+states = 0 1
+init_state = 1
+state_repr = diabatic
+random_state = 1234
+n_part = 18
+atomids = []
+
+[sampler(Wigner)]
+from = model
+
+[sampler(Wigner)::from(model)]
+model = SumOfProductsPES
+
+[sampler(Wigner)::from(model)::model(SumOfProductsPES)]
+parameter_file = C4H4.pes
