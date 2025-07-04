@@ -1,0 +1,11 @@
+logging = debug
+mode = model
+use_db = no
+
+[mode(model)]
+model = SumOfProductsPES
+
+[mode(model)::model(SumOfProductsPES)]
+parameter_file = psb3.pes
+
+[use_db(no)]
