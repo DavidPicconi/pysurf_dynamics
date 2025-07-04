@@ -1,0 +1,11 @@
+logging = debug
+mode = model
+use_db = no
+
+[mode(model)]
+model = LVC
+
+[mode(model)::model(LVC)]
+parameter_file = bma_pot.inp
+
+[use_db(no)]
